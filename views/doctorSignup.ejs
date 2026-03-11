@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Doctor Signup</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+
+        <div class="card shadow-lg border-0 rounded-4">
+          <div class="card-body p-4">
+            <h3 class="text-center mb-4 text-primary">Doctor Signup</h3>
+
+            <% if (error) { %>
+              <div class="alert alert-danger"><%= error %></div>
+            <% } %>
+
+            <form action="/doctor/signup" method="POST">
+              <div class="mb-3">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-control" name="name" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Speciality</label>
+                <select class="form-select" name="speciality" required>
+                  <option value="">Select Speciality</option>
+                  <option>General Physician</option>
+                  <option>Cardiologist</option>
+                  <option>Dermatologist</option>
+                  <option>Orthopedic</option>
+                  <option>Pediatrician</option>
+                  <option>Psychiatrist</option>
+                  <option>Neurologist</option>
+                  <option>Dentist</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Experience (years)</label>
+                <input type="number" class="form-control" name="experience" min="0" value="0" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Phone Number</label>
+                <input type="text" class="form-control" name="phoneNumber" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-control" name="email" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" name="password" required>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100">Signup</button>
+              <div class="text-center mt-3">
+                <a href="/doctor/login">Already have an account? Login</a>
+              </div>
+            </form>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

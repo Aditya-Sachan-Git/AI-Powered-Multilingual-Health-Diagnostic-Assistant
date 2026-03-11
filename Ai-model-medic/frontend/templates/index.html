@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Disease Prediction System</title>
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f4f6f9;
+            text-align: center;
+            padding-top: 50px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            width: 500px;
+            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        input[type="text"] {
+            width: 90%;
+            padding: 10px;
+            margin-top: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9f7ef;
+            border-radius: 5px;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <nav>
+        <a href="/">Manual Entry</a> | 
+        <a href="/chat">Chat Analysis</a>
+    </nav>
+    <h2>🩺 AI Disease Prediction System</h2>
+
+    <form method="POST">
+        <input type="text" name="symptoms" 
+               placeholder="Enter symptoms (e.g. fever headache nausea)"
+               required>
+        <br>
+        <button type="submit">Predict Disease</button>
+    </form>
+
+    {% if prediction %}
+        <div class="result">
+            <h3>Prediction Result</h3>
+            <p><strong>Symptoms:</strong> {{ symptoms }}</p>
+            <p><strong>Predicted Disease:</strong> {{ prediction }}</p>
+            <p><strong>Confidence:</strong> {{ confidence }}%</p>
+            <p style="color:red;">
+                ⚠ This system provides advisory prediction only.
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

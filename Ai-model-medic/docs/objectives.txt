@@ -1,0 +1,6 @@
+1. To develop an AI-based symptom checker chatbot for early disease risk assessment.
+2. To predict likely diseases and severity levels using NLP and ML techniques.
+3. To analyze weather, population, and historical disease data for outbreak prediction.
+4. To identify high-risk regions using spatiotemporal ML models.
+5. To visualize epidemic risk zones using an interactive dashboard.
+6. To provide early alerts to support preventive public health actions.

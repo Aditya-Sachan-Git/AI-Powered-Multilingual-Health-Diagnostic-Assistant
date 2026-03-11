@@ -1,0 +1,302 @@
+const socket = io();
+let localStream;
+let peerConnection;
+let myRole = null;
+let signDetectionInterval = null;
+let isProcessingSign = false;
+
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
+const sendMsgBtn = document.getElementById("sendMsgBtn");
+const chatBox = document.getElementById("chatBox");
+const captureBtn = document.getElementById("captureBtn");
+const transcript = document.getElementById("transcript");
+const signCanvas = document.getElementById("signCanvas");
+const ctx = signCanvas ? signCanvas.getContext("2d") : null;
+
+const config = {
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+};
+
+// === 1. Video/Audio Initialization ===
+async function init() {
+  localStream = await navigator.mediaDevices.getUserMedia({ 
+    video: { width: 640, height: 480 }, 
+    audio: true 
+  });
+  localVideo.srcObject = localStream;
+
+  // Set up canvas for sign detection if it exists
+  if (signCanvas && localVideo) {
+    signCanvas.width = 640;
+    signCanvas.height = 480;
+    
+    // Start continuous sign detection
+    startSignDetection();
+  }
+
+  // Join room first, then handle role assignment
+  socket.emit("join-room", ROOM_ID);
+
+  // Handle role assignment
+  socket.on("role-assigned", (role) => {
+    myRole = role;
+    console.log("My role is:", myRole);
+    updateUIBasedOnRole(role);
+  });
+
+  socket.on("room-full", () => {
+    alert("Room is full!");
+  });
+
+  socket.on("user-connected", async (otherUserId) => {
+    console.log("User connected:", otherUserId);
+    createPeer();
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit("offer", { sdp: offer, to: otherUserId });
+  });
+
+  socket.on("offer", async ({ sdp, from }) => {
+    console.log("Received offer from:", from);
+    createPeer();
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit("answer", { sdp: answer, to: from });
+  });
+
+  socket.on("answer", async ({ sdp }) => {
+    console.log("Received answer");
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+  });
+
+  socket.on("ice-candidate", ({ candidate }) => {
+    if (peerConnection) {
+      peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    }
+  });
+
+  // Handle chat messages
+  socket.on("chat-message", ({ sender, message, senderRole }) => {
+    addChatBubble(sender, message, senderRole);
+  });
+
+  // Handle sign language results
+  socket.on("sign-detected", ({ text, confidence, sender, senderRole }) => {
+    if (confidence > 0.7) { // Only show high confidence detections
+      addSignBubble(sender, text, confidence, senderRole);
+    }
+  });
+}
+
+function createPeer() {
+  if (peerConnection) return;
+  peerConnection = new RTCPeerConnection(config);
+
+  localStream.getTracks().forEach(track => {
+    peerConnection.addTrack(track, localStream);
+  });
+
+  peerConnection.ontrack = ({ streams: [stream] }) => {
+    remoteVideo.srcObject = stream;
+  };
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      socket.emit("ice-candidate", { candidate: event.candidate });
+    }
+  };
+
+  peerConnection.onconnectionstatechange = () => {
+    console.log("Connection state:", peerConnection.connectionState);
+  };
+}
+
+// Update UI based on assigned role
+function updateUIBasedOnRole(role) {
+  const roleIndicator = document.getElementById("roleIndicator") || createRoleIndicator();
+  roleIndicator.textContent = `Your Role: ${role}`;
+  roleIndicator.className = `role-indicator role-${role.toLowerCase()}`;
+}
+
+function createRoleIndicator() {
+  const indicator = document.createElement("div");
+  indicator.id = "roleIndicator";
+  indicator.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    z-index: 1000;
+    background: rgba(0,0,0,0.8);
+    color: white;
+  `;
+  document.body.appendChild(indicator);
+  return indicator;
+}
+
+init();
+
+// === 2. Sign Language Detection ===
+function startSignDetection() {
+  // Process frames every 2 seconds to avoid overwhelming the server
+  signDetectionInterval = setInterval(() => {
+    if (!isProcessingSign && localVideo.videoWidth > 0) {
+      captureAndProcessSign();
+    }
+  }, 2000);
+}
+
+function stopSignDetection() {
+  if (signDetectionInterval) {
+    clearInterval(signDetectionInterval);
+    signDetectionInterval = null;
+  }
+}
+
+async function captureAndProcessSign() {
+  if (isProcessingSign || !ctx || !localVideo.videoWidth) return;
+  
+  isProcessingSign = true;
+  
+  try {
+    // Draw current video frame to canvas
+    ctx.drawImage(localVideo, 0, 0, signCanvas.width, signCanvas.height);
+    
+    // Convert canvas to blob
+    const blob = await new Promise(resolve => {
+      signCanvas.toBlob(resolve, 'image/jpeg', 0.8);
+    });
+    
+    await processSignLanguage(blob);
+  } catch (error) {
+    console.error("Error capturing sign:", error);
+  } finally {
+    isProcessingSign = false;
+  }
+}
+
+// Manual capture button
+if (captureBtn) {
+  captureBtn.onclick = async () => {
+    if (!isProcessingSign) {
+      await captureAndProcessSign();
+    }
+  };
+}
+
+async function processSignLanguage(imageBlob) {
+  const formData = new FormData();
+  formData.append('image', imageBlob, 'sign.jpg');
+  formData.append('roomId', ROOM_ID);
+  formData.append('role', myRole);
+
+  try {
+    const response = await fetch('/api/sign/detect', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.text) {
+      // Update transcript with detected sign
+      transcript.value = result.text;
+      
+      // Emit to other users in the room
+      socket.emit("sign-detected", {
+        roomId: ROOM_ID,
+        text: result.text,
+        confidence: result.confidence,
+        role: myRole
+      });
+      
+      // Show detection status
+      updateSignStatus(result.text, result.confidence);
+    }
+    
+  } catch (error) {
+    console.error('Sign detection error:', error);
+    updateSignStatus('Detection failed', 0);
+  }
+}
+
+function updateSignStatus(text, confidence) {
+  const statusDiv = document.getElementById('signStatus') || createSignStatus();
+  statusDiv.textContent = `Detected: ${text} (${Math.round(confidence * 100)}%)`;
+  statusDiv.className = confidence > 0.7 ? 'sign-status high-confidence' : 'sign-status low-confidence';
+}
+
+function createSignStatus() {
+  const status = document.createElement('div');
+  status.id = 'signStatus';
+  status.style.cssText = `
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 1000;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    max-width: 300px;
+  `;
+  document.body.appendChild(status);
+  return status;
+}
+
+// === 3. Chat Message ===
+sendMsgBtn.onclick = () => {
+  const text = transcript.value.trim();
+  if (text && myRole) {
+    socket.emit("chat-message", { 
+      roomId: ROOM_ID, 
+      message: text,
+      role: myRole 
+    });
+    transcript.value = "";
+  } else if (!myRole) {
+    alert("Please wait for role assignment before sending messages.");
+  }
+};
+
+function addChatBubble(sender, msg, senderRole) {
+  const p = document.createElement("p");
+  const roleClass = senderRole ? senderRole.toLowerCase() : 'unknown';
+  p.className = `chat-message role-${roleClass}`;
+  
+  const roleDisplay = senderRole ? ` (${senderRole})` : '';
+  p.innerHTML = `<strong>${sender}${roleDisplay}:</strong> ${msg}`;
+  
+  chatBox.appendChild(p);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function addSignBubble(sender, text, confidence, senderRole) {
+  const p = document.createElement("p");
+  const roleClass = senderRole ? senderRole.toLowerCase() : 'unknown';
+  p.className = `chat-message sign-message role-${roleClass}`;
+  
+  const roleDisplay = senderRole ? ` (${senderRole})` : '';
+  const confidenceDisplay = `${Math.round(confidence * 100)}%`;
+  p.innerHTML = `<strong>${sender}${roleDisplay} [SIGN ${confidenceDisplay}]:</strong> ${text}`;
+  
+  chatBox.appendChild(p);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  stopSignDetection();
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+  }
+});

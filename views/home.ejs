@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCare Plus - Your Complete Healthcare Solution</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --galaxy-dark: #0f172a;
+            --galaxy-light: #1e293b;
+            --nebula-blue: #6366f1;
+            --nebula-light: #818cf8;
+            --nebula-dark: #4f46e5;
+            --purple-dark: #4338ca;
+            --white-soft: #f8fafc;
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.8);
+            --card-bg: rgba(255, 255, 255, 0.15);
+            --card-border: rgba(255, 255, 255, 0.2);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 16px 64px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+            background-color: var(--galaxy-dark);
+        }
+
+        .galaxy-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at bottom, var(--galaxy-dark) 0%, var(--galaxy-light) 10%);
+            overflow: hidden;
+        }
+
+        .shooting-stars, .stars, .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .shooting-star {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: var(--text-white);
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 0 0 8px rgba(255, 255, 255, 0.05), 0 0 20px rgba(255, 255, 255, 0.8);
+            animation: shooting 4s linear infinite;
+        }
+
+        .shooting-star::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent);
+        }
+
+        @keyframes shooting {
+            0% { transform: rotate(215deg) translateX(0); opacity: 1; }
+            70% { opacity: 1; }
+            100% { transform: rotate(215deg) translateX(-1000px); opacity: 0; }
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--text-white);
+            border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .particle {
+            position: absolute;
+            background: var(--text-white);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) translateX(0); opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { transform: translateY(-100vh) translateX(5px); opacity: 0; }
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .nav.scrolled {
+            padding: 16px 40px;
+            background: rgba(15, 23, 42, 0.9);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo-nav {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-nav i {
+            font-size: 1.8rem;
+            color: var(--nebula-light);
+        }
+
+        .nav-items {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--nebula-light);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text-white);
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .btn-login {
+            color: var(--text-white);
+            background: transparent;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 6px;
+        }
+
+        .btn-login:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-signup {
+            background: var(--nebula-light);
+            color: var(--text-white);
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-signup:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+            background: var(--nebula-blue);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .hero {
+            padding: 120px 0 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--nebula-light);
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            animation: slideInLeft 1s ease;
+        }
+
+        .hero-title {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--text-white);
+            margin-bottom: 24px;
+            animation: slideInLeft 1s ease 0.2s both;
+        }
+
+        .hero-title .gradient-text {
+            background: linear-gradient(135deg, var(--nebula-blue) 0%, var(--purple-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-description {
+            font-size: 20px;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            line-height: 1.6;
+            animation: slideInLeft 1s ease 0.4s both;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 40px;
+            animation: slideInLeft 1s ease 0.6s both;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 40px;
+            animation: slideInLeft 1s ease 0.8s both;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--nebula-light);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .hero-visual {
+            position: relative;
+            animation: slideInRight 1s ease 0.4s both;
+        }
+
+        .hero-image {
+            width: 100%;
+            height: 500px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .medical-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .heartbeat {
+            width: 100px;
+            height: 100px;
+            background: rgba(236, 72, 153, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-white);
+            font-size: 40px;
+            animation: heartbeat 2s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .medical-icons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .medical-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--nebula-blue);
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .medical-icon:nth-child(2) { animation-delay: 0.5s; }
+        .medical-icon:nth-child(3) { animation-delay: 1s; }
+        .medical-icon:nth-child(4) { animation-delay: 1.5s; }
+
+        .services {
+            padding: 80px 0;
+            background: var(--galaxy-dark);
+        }
+
+        .services-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .section-description {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .services-grid {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+
+        .service-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+            flex: 1;
+            max-width: 350px;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .service-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .service-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 24px;
+            color: var(--nebula-blue);
+            animation: spin 6s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .service-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .service-description {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .service-features {
+            list-style: none;
+            margin-bottom: 24px;
+        }
+
+        .service-feature {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            color: var(--text-white);
+            justify-content: center;
+        }
+
+        .service-feature i {
+            color: var(--nebula-light);
+            font-size: 14px;
+        }
+
+        .service-cta {
+            width: 100%;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--nebula-light);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .service-cta:hover {
+            background: var(--nebula-light);
+            color: var(--text-white);
+            transform: translateY(-2px);
+        }
+
+        .features {
+            padding: 80px 0;
+            background: var(--galaxy-light);
+            position: relative;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            justify-items: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px 24px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 220px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            margin: 0 auto 20px;
+            color: var(--nebula-blue);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+
+        .feature-description {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, var(--galaxy-dark) 0%, var(--purple-dark) 100%);
+            padding: 60px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .cta-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        .cta-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(129, 140, 248, 0.5);
+        }
+
+        .cta-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: rgba(79, 70, 229, 0.8);
+            color: var(--text-white);
+            padding: 16px 32px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 48px rgba(79, 70, 229, 0.4);
+            background: rgba(79, 70, 229, 0.9);
+        }
+
+        .footer {
+            background: var(--galaxy-light);
+            padding: 80px 0 40px;
+            text-align: center;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+        }
+
+        .footer-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .footer-logo i {
+            font-size: 1.8rem;
+            color: var(--nebula-light);
+        }
+
+        .footer-description {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .footer-heading {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: block;
+            padding: 8px 0;
+            transition: color 0.3s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--text-white);
+        }
+
+        .footer-bottom {
+            margin-top: 60px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: var(--galaxy-light);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            animation: slideInUp 0.3s ease;
+        }
+
+        .modal-header {
+            margin-bottom: 24px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-white);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .assessment-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .form-input, .form-select {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            background: var(--card-bg);
+            color: var(--text-white);
+            font-size: 0.95rem;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--nebula-light);
+        }
+
+        .symptom-checker {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .symptom-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            background: var(--card-bg);
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .symptom-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--card-bg);
+            border-radius: 4px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--nebula-light);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 24px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-items {
+                display: none;
+            }
+            .hero-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .hero-title {
+                font-size: 40px;
+            }
+            .hero-stats {
+                justify-content: center;
+            }
+            .section-title {
+                font-size: 2rem;
+            }
+            .services-grid {
+                flex-direction: column;
+                align-items: center;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .footer-container {
+                grid-template-columns: 1fr;
+            }
+            .cta-title {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title {
+                font-size: 32px;
+            }
+            .hero-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .hero-stats {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+            .service-card {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="galaxy-bg">
+        <div class="shooting-stars"></div>
+        <div class="stars"></div>
+    </div>
+
+    <div class="particles" id="particles"></div>
+
+    <nav class="nav" id="navbar">
+        <div class="logo-nav">
+            <i class="fas fa-heartbeat"></i>
+            <span>MediCare Plus</span>
+        </div>
+        
+        
+    </nav>
+
+    <div class="container">
+        <section class="hero">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Trusted Healthcare Platform</span>
+                    </div>
+                    <h1 class="hero-title">
+                        Your Health, Our <span class="gradient-text">Priority</span>
+                    </h1>
+                    <p class="hero-description">
+                        Experience comprehensive healthcare services from the comfort of your home. 
+                        Consult with specialists, book home tests, and get AI-powered health assessments.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href = '/meet'>
+                            <button class="btn-signup" onclick="openModal('consultation')">
+                            <i class="fas fa-video"></i>
+                                Book Consultation
+                            </button>
+                        </a>
+                        
+                        <button class="btn-login" onclick="openModal('ai-assessment')">
+                            <i class="fas fa-brain"></i>
+                            AI Assessment
+                        </button>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <div class="stat-number">50K+</div>
+                            <div class="stat-label">Happy Patients</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">500+</div>
+                            <div class="stat-label">Expert Doctors</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">24/7</div>
+                            <div class="stat-label">Support</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-image">
+                        <div class="medical-animation">
+                            <div class="heartbeat">
+                                <i class="fas fa-heartbeat"></i>
+                            </div>
+                            <div class="medical-icons">
+                                <div class="medical-icon">
+                                    <i class="fas fa-stethoscope"></i>
+                                </div>
+                                <div class="medical-icon">
+                                    <i class="fas fa-pills"></i>
+                                </div>
+                                <div class="medical-icon">
+                                    <i class="fas fa-microscope"></i>
+                                </div>
+                                <div class="medical-icon">
+                                    <i class="fas fa-user-md"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="services" id="services">
+            <div class="services-container">
+                <div class="section-header fade-in">
+                    <h2 class="section-title">Comprehensive Healthcare Solutions</h2>
+                    <p class="section-description">
+                        From virtual consultations to AI-powered diagnostics, we provide cutting-edge healthcare services tailored to your needs.
+                    </p>
+                </div>
+                <div class="services-grid">
+                    <div class="service-card fade-in">
+                        <div class="service-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <h3 class="service-title">Virtual Consultations</h3>
+                        <p class="service-description">
+                            Connect with certified healthcare professionals from anywhere. Get expert medical advice through secure video calls.
+                        </p>
+                        <ul class="service-features">
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>24/7 Doctor Availability</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Instant Prescription Delivery</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Specialist Referrals</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Digital Health Records</span>
+                            </li>
+                        </ul>
+                        <button class="service-cta" onclick="openModal('consultation')">
+                            Book Consultation
+                        </button>
+                    </div>
+
+                    <div class="service-card fade-in">
+                        <div class="service-icon">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <h3 class="service-title">Home Lab Tests</h3>
+                        <p class="service-description">
+                            Get comprehensive lab tests done at your home with professional sample collection and accurate results.
+                        </p>
+                        <ul class="service-features">
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Home Sample Collection</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>NABL Certified Labs</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Digital Reports in 24hrs</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Free Doctor Consultation</span>
+                            </li>
+                        </ul>
+                        <button class="service-cta" onclick="openModal('home-test')">
+                            Book Home Test
+                        </button>
+                    </div>
+
+                    <div class="service-card fade-in">
+                        <div class="service-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3 class="service-title">Health Assessment</h3>
+                        <p class="service-description">
+                            Advanced AI-powered health screening that analyzes symptoms and provides personalized health insights.
+                        </p>
+                        <ul class="service-features">
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Symptom Analysis</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Risk Assessment</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Recommendations</span>
+                            </li>
+                            <li class="service-feature">
+                                <i class="fas fa-check"></i>
+                                <span>Health Trend Tracking</span>
+                            </li>
+                        </ul>
+                        <button class="service-cta" onclick="openModal('ai-assessment')">
+                            Start AI Assessment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" id="features">
+            <div class="features-container">
+                <div class="section-header fade-in">
+                    <h2 class="section-title">Advanced Healthcare Technology</h2>
+                    <p class="section-description">
+                        We leverage cutting-edge technology to provide superior healthcare experiences
+                    </p>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3 class="feature-title">100% Safe & Secure</h3>
+                        <p class="feature-description">
+                            HIPAA compliant platform with end-to-end encryption ensuring complete privacy.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h3 class="feature-title">Quick Response Time</h3>
+                        <p class="feature-description">
+                            Connect with healthcare professionals within minutes, 24/7 emergency support.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <h3 class="feature-title">Certified Professionals</h3>
+                        <p class="feature-description">
+                            Our doctors are certified with extensive experience in their specialties.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <h3 class="feature-title">Mobile Friendly</h3>
+                        <p class="feature-description">
+                            Access services via our iOS and Android app with offline capabilities.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-section" id="contact">
+            <div class="cta-container">
+                <h2 class="cta-title">Ready to Experience Better Healthcare?</h2>
+                <p class="cta-text">
+                    Join thousands of satisfied patients who trust MediCare Plus for their healthcare needs.
+                </p>
+                <div class="cta-buttons">
+                    <button class="btn-primary" onclick="openModal('consultation')">
+                        <i class="fas fa-calendar-check"></i>
+                        Book Appointment
+                    </button>
+                    <button class="btn-primary" style="background: transparent; border: 1px solid var(--text-white);">
+                        <i class="fas fa-phone"></i>
+                        Call Us Now
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+   
+
+    <div id="consultation-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeModal('consultation-modal')">&times;</button>
+                <h2>Book Virtual Consultation</h2>
+                <p>Connect with our certified doctors instantly</p>
+            </div>
+            <form class="assessment-form">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="consultation-progress"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Select Specialty</label>
+                    <select class="form-select" onchange="updateProgress('consultation', 25)">
+                        <option value="">Choose a specialty</option>
+                        <option value="general">General Medicine</option>
+                        <option value="cardiology">Cardiology</option>
+                        <option value="dermatology">Dermatology</option>
+                        <option value="pediatrics">Pediatrics</option>
+                        <option value="psychiatry">Psychiatry</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preferred Date & Time</label>
+                    <input type="datetime-local" class="form-input" onchange="updateProgress('consultation', 50)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Describe Your Symptoms</label>
+                    <textarea class="form-input" rows="4" placeholder="Please describe your symptoms or concerns..." onchange="updateProgress('consultation', 75)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contact Information</label>
+                    <input type="tel" class="form-input" placeholder="Phone Number" onchange="updateProgress('consultation', 100)">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 16px;">
+                    <i class="fas fa-calendar-check"></i>
+                    Book Consultation
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="home-test-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeModal('home-test-modal')">&times;</button>
+                <h2>Book Home Lab Test</h2>
+                <p>Professional sample collection at your doorstep</p>
+            </div>
+            <form class="assessment-form">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="home-test-progress"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Select Test Package</label>
+                    <div class="symptom-checker">
+                        <div class="symptom-option" onclick="selectTest(this, 'basic')">
+                            <input type="radio" name="test-package" value="basic" class="symptom-checkbox">
+                            <div>
+                                <strong>Basic Health Checkup</strong><br>
+                                <small>CBC, Blood Sugar, Lipid Profile</small>
+                            </div>
+                        </div>
+                        <div class="symptom-option" onclick="selectTest(this, 'comprehensive')">
+                            <input type="radio" name="test-package" value="comprehensive" class="symptom-checkbox">
+                            <div>
+                                <strong>Comprehensive Checkup</strong><br>
+                                <small>50+ Tests including Vitamins</small>
+                            </div>
+                        </div>
+                        <div class="symptom-option" onclick="selectTest(this, 'cardiac')">
+                            <input type="radio" name="test-package" value="cardiac" class="symptom-checkbox">
+                            <div>
+                                <strong>Cardiac Screening</strong><br>
+                                <small>Heart Health Assessment</small>
+                            </div>
+                        </div>
+                        <div class="symptom-option" onclick="selectTest(this, 'diabetes')">
+                            <input type="radio" name="test-package" value="diabetes" class="symptom-checkbox">
+                            <div>
+                                <strong>Diabetes Screening</strong><br>
+                                <small>HbA1c, Glucose, Insulin</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preferred Collection Date</label>
+                    <input type="date" class="form-input" onchange="updateProgress('home-test', 50)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Collection Address</label>
+                    <textarea class="form-input" rows="3" placeholder="Enter your complete address" onchange="updateProgress('home-test', 75)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contact Number</label>
+                    <input type="tel" class="form-input" placeholder="Phone Number" onchange="updateProgress('home-test', 100)">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 16px;">
+                    <i class="fas fa-home"></i>
+                    Book Home Test
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="ai-assessment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeModal('ai-assessment-modal')">&times;</button>
+                <h2>AI Health Assessment</h2>
+                <p>Get personalized health insights powered by AI</p>
+            </div>
+            <form class="assessment-form">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="ai-progress"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Basic Information</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <input type="number" class="form-input" placeholder="Age" onchange="updateProgress('ai', 20)">
+                        <select class="form-select" onchange="updateProgress('ai', 25)">
+                            <option value="">Gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Current Symptoms (Select all that apply)</label>
+                    <div class="symptom-checker">
+                        <div class="symptom-option" onclick="toggleSymptom(this)">
+                            <input type="checkbox" class="symptom-checkbox">
+                            <span>Fever</span>
+                        </div>
+                        <div class="symptom-option" onclick="toggleSymptom(this)">
+                            <input type="checkbox" class="symptom-checkbox">
+                            <span>Headache</span>
+                        </div>
+                        <div class="symptom-option" onclick="toggleSymptom(this)">
+                            <input type="checkbox" class="symptom-checkbox">
+                            <span>Cough</span>
+                        </div>
+                        <div class="symptom-option" onclick="toggleSymptom(this)">
+                            <input type="checkbox" class="symptom-checkbox">
+                            <span>Fatigue</span>
+                        </div>
+                        <div class="symptom-option" onclick="toggleSymptom(this)">
+                            <input type="checkbox" class="symptom-checkbox">
+                            <span>Chest Pain</span>
+                        </div>
+                        <div class="symptom-option" onclick="toggleSymptom(this)">
+                            <input type="checkbox" class="symptom-checkbox">
+                            <span>Nausea</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">How long have you been experiencing these symptoms?</label>
+                    <select class="form-select" onchange="updateProgress('ai', 75)">
+                        <option value="">Select duration</option>
+                        <option value="1-day">Less than 1 day</option>
+                        <option value="1-3-days">1-3 days</option>
+                        <option value="1-week">About a week</option>
+                        <option value="1-month">More than a month</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Any existing medical conditions?</label>
+                    <textarea class="form-input" rows="3" placeholder="List any chronic conditions, allergies, or medications" onchange="updateProgress('ai', 100)"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 16px;">
+                    <i class="fas fa-brain"></i>
+                    Start AI Analysis
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Shooting Stars
+        const shootingStarsContainer = document.querySelector('.shooting-stars');
+        for (let i = 0; i < 10; i++) {
+            const star = document.createElement('div');
+            star.classList.add('shooting-star');
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.animationDelay = `${Math.random() * 4}s`;
+            star.style.animationDuration = `${Math.random() * 2 + 3}s`;
+            shootingStarsContainer.appendChild(star);
+        }
+
+        // Twinkling Stars
+        const starsContainer = document.querySelector('.stars');
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            star.style.animationDelay = `${Math.random() * 3}s`;
+            starsContainer.appendChild(star);
+        }
+
+        // Particles
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 50;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            const size = Math.random() * 4 + 2;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            const duration = Math.random() * 10 + 10;
+            particle.style.animationDuration = `${duration}s`;
+            particle.style.animationDelay = `${Math.random() * 5}s`;
+            particlesContainer.appendChild(particle);
+        }
+
+        // Navbar scroll effect
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Modal functionality
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId + '-modal');
+            if (modal) {
+                modal.style.display = 'block';
+                setTimeout(() => modal.classList.add('show'), 10);
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+        }
+
+        // Progress bar updates
+        function updateProgress(type, value) {
+            const progress = document.getElementById(`${type}-progress`);
+            if (progress) {
+                progress.style.width = `${Math.min(value, 100)}%`;
+            }
+        }
+
+        // Symptom checker
+        function toggleSymptom(element) {
+            const checkbox = element.querySelector('.symptom-checkbox');
+            checkbox.checked = !checkbox.checked;
+            updateProgress('ai', Math.min(50 + (checkbox.checked ? 5 : -5), 75));
+        }
+
+        function selectTest(element, testType) {
+            const checkboxes = document.querySelectorAll('.symptom-checkbox[name="test-package"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            element.querySelector('.symptom-checkbox').checked = true;
+            updateProgress('home-test', 25);
+        }
+
+        // Scroll animation
+        function handleScrollAnimation() {
+            const fadeIns = document.querySelectorAll('.fade-in');
+            fadeIns.forEach(element => {
+                const rect = element.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+                if (rect.top >= 0 && rect.top < windowHeight - 100) {
+                    element.classList.add('visible');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', handleScrollAnimation);
+        window.addEventListener('load', handleScrollAnimation);
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    closeModal(modal.id);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

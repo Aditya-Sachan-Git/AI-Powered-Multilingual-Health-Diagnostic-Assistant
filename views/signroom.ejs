@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Room <%= roomId %></title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .room-info {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .video-section, .chat-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .section-title {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .video-container {
+            position: relative;
+            background: black;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        #webcam {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .gesture-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .gesture-btn {
+            background: #27ae60;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+        }
+
+        .gesture-btn:hover {
+            background: #219a52;
+        }
+
+        .detection-status {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .gesture-output {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 80px;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .gesture-output .text {
+            color: #2c3e50;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .gesture-output .confidence {
+            color: #27ae60;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .gesture-history {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .gesture-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+
+        .gesture-item:last-child {
+            border-bottom: none;
+        }
+
+        .chat-messages {
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-y: auto;
+            background: white;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #ecf0f1;
+        }
+
+        .message.own {
+            background: #d4edda;
+            text-align: right;
+        }
+
+        .message.gesture {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .message-header {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .language-selector {
+            margin-top: 15px;
+        }
+
+        .language-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .gesture-guide {
+            background: #e8f4fd;
+            border: 1px solid #3498db;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .gesture-guide h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .gesture-category {
+            margin-bottom: 15px;
+        }
+
+        .gesture-category h4 {
+            color: #3498db;
+            margin-bottom: 8px;
+        }
+
+        .gesture-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+        }
+
+        .gesture-item-guide {
+            padding: 5px;
+            font-size: 0.9rem;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 6px;
+            background: #ecf0f1;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #27ae60;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👋 Dynamic Sign Language Recognition</h1>
+            <div class="room-info">Room: <%= roomId %> | Real-time gesture to text conversion</div>
+        </div>
+
+        <div class="main-content">
+            <div class="video-section">
+                <h2 class="section-title">🎥 Live Sign Detection</h2>
+                
+                <div class="video-container">
+                    <video id="webcam" autoplay playsinline></video>
+                    <canvas class="canvas-overlay" id="output"></canvas>
+                </div>
+
+                <div class="controls">
+                    <button id="startBtn">Start Detection</button>
+                    <button id="stopBtn" disabled>Stop Detection</button>
+                    <button id="clearBtn">Clear History</button>
+                </div>
+
+                <div class="gesture-buttons">
+                    <button class="gesture-btn" data-gesture="Hello">👋 Hello</button>
+                    <button class="gesture-btn" data-gesture="Thank You">🙏 Thank You</button>
+                    <button class="gesture-btn" data-gesture="Yes">👍 Yes</button>
+                    <button class="gesture-btn" data-gesture="No">👎 No</button>
+                    <button class="gesture-btn" data-gesture="Help">🆘 Help</button>
+                    <button class="gesture-btn" data-gesture="Food">🍕 Food</button>
+                </div>
+
+                <div class="detection-status" id="status">
+                    Click "Start Detection" to begin gesture recognition
+                </div>
+
+                <div class="gesture-output">
+                    <div class="text" id="gestureText">Waiting for gesture...</div>
+                    <div class="confidence" id="confidence">Confidence: 0%</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="gesture-history" id="gestureHistory">
+                    <div style="color: #7f8c8d; text-align: center; padding: 10px;">Recent gestures will appear here</div>
+                </div>
+
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="Or type your message here...">
+                    <button id="sendBtn">Send</button>
+                </div>
+
+                <div class="language-selector">
+                    <select id="languageSelect">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="chat-section">
+                <h2 class="section-title">💬 Live Chat Translation</h2>
+                <div class="chat-messages" id="chatMessages"></div>
+                
+                <div class="gesture-guide">
+                    <h3>🎯 Gesture Vocabulary Guide</h3>
+                    
+                    <div class="gesture-category">
+                        <h4>Basic Communication</h4>
+                        <div class="gesture-list">
+                            <div class="gesture-item-guide">👋 <strong>Hello:</strong> Open hand wave</div>
+                            <div class="gesture-item-guide">🙏 <strong>Thank You:</strong> Hands together</div>
+                            <div class="gesture-item-guide">👍 <strong>Yes:</strong> Thumbs up</div>
+                            <div class="gesture-item-guide">👎 <strong>No:</strong> Thumbs down</div>
+                            <div class="gesture-item-guide">👌 <strong>OK:</strong> Circle with thumb & index</div>
+                        </div>
+                    </div>
+
+                    <div class="gesture-category">
+                        <h4>Needs & Requests</h4>
+                        <div class="gesture-list">
+                            <div class="gesture-item-guide">🆘 <strong>Help:</strong> Wave both hands</div>
+                            <div class="gesture-item-guide">🍕 <strong>Food:</strong> Hand to mouth</div>
+                            <div class="gesture-item-guide">💧 <strong>Water:</strong> Cupped hand to mouth</div>
+                            <div class="gesture-item-guide">😴 <strong>Sleep:</strong> Hands together at cheek</div>
+                            <div class="gesture-item-guide">🏥 <strong>Doctor:</strong> Hand on wrist (pulse)</div>
+                        </div>
+                    </div>
+
+                    <div class="gesture-category">
+                        <h4>Emotions & States</h4>
+                        <div class="gesture-list">
+                            <div class="gesture-item-guide">😊 <strong>Happy:</strong> Smile with open hands</div>
+                            <div class="gesture-item-guide">😢 <strong>Sad:</strong> Wipe tears motion</div>
+                            <div class="gesture-item-guide">😡 <strong>Angry:</strong> Clenched fist shake</div>
+                            <div class="gesture-item-guide">😨 <strong>Scared:</strong> Hands on cheeks</div>
+                            <div class="gesture-item-guide">🤒 <strong>Pain:</strong> Hand on pained area</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Socket.io connection
+        const socket = io();
+        const roomId = '<%= roomId %>';
+        let currentLanguage = 'en';
+        let isDetecting = false;
+        let detector;
+        let lastDetectedGesture = '';
+        let gestureCooldown = false;
+        let gestureHistory = [];
+        let gestureBuffer = [];
+        const GESTURE_BUFFER_SIZE = 5;
+
+        // DOM elements
+        const webcam = document.getElementById('webcam');
+        const output = document.getElementById('output');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const status = document.getElementById('status');
+        const gestureText = document.getElementById('gestureText');
+        const confidence = document.getElementById('confidence');
+        const confidenceBar = document.getElementById('confidenceBar');
+        const gestureHistoryDiv = document.getElementById('gestureHistory');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatMessages = document.getElementById('chatMessages');
+        const languageSelect = document.getElementById('languageSelect');
+
+        // Enhanced gesture vocabulary with detailed detection rules
+        const GESTURE_VOCABULARY = {
+            // Basic gestures
+            '👋 Hello': {
+                description: 'Open hand wave',
+                detection: (keypoints) => {
+                    const fingersUp = getFingersUp(keypoints);
+                    return fingersUp.filter(up => up).length >= 4 && 
+                           isHandMoving(keypoints, 10);
+                },
+                confidence: 0.85
+            },
+            '🙏 Thank You': {
+                description: 'Hands together prayer position',
+                detection: (keypoints) => {
+                    // This would work better with two hands, but we'll simulate
+                    const fingersUp = getFingersUp(keypoints);
+                    return fingersUp.every(up => up) && 
+                           getHandOpenness(keypoints) > 0.7;
+                },
+                confidence: 0.8
+            },
+            '👍 Yes': {
+                description: 'Thumbs up',
+                detection: (keypoints) => {
+                    const fingersUp = getFingersUp(keypoints);
+                    return fingersUp[0] && !fingersUp[1] && !fingersUp[2] && 
+                           !fingersUp[3] && !fingersUp[4];
+                },
+                confidence: 0.9
+            },
+            '👎 No': {
+                description: 'Thumbs down',
+                detection: (keypoints) => {
+                    const fingersUp = getFingersUp(keypoints);
+                    return !fingersUp[0] && !fingersUp[1] && !fingersUp[2] && 
+                           !fingersUp[3] && !fingersUp[4] &&
+                           keypoints[4].y > keypoints[0].y;
+                },
+                confidence: 0.85
+            },
+            '👌 OK': {
+                description: 'OK sign',
+                detection: (keypoints) => {
+                    return isTouching(keypoints[4], keypoints[8]) && 
+                           !getFingersUp(keypoints).slice(2).some(up => up);
+                },
+                confidence: 0.8
+            },
+            '✌️ Peace': {
+                description: 'Peace sign',
+                detection: (keypoints) => {
+                    const fingersUp = getFingersUp(keypoints);
+                    return !fingersUp[0] && fingersUp[1] && fingersUp[2] && 
+                           !fingersUp[3] && !fingersUp[4];
+                },
+                confidence: 0.8
+            },
+            '✊ Fist': {
+                description: 'Closed fist',
+                detection: (keypoints) => {
+                    const fingersUp = getFingersUp(keypoints);
+                    return fingersUp.every(up => !up);
+                },
+                confidence: 0.9
+            },
+            '👐 Open Hands': {
+                description: 'Fully open hand',
+                detection: (keypoints) => {
+                    const fingersUp = getFingersUp(keypoints);
+                    return fingersUp.every(up => up);
+                },
+                confidence: 0.85
+            },
+            '🆘 Help': {
+                description: 'Wave both hands',
+                detection: (keypoints) => {
+                    return isHandMoving(keypoints, 15) && 
+                           getHandOpenness(keypoints) > 0.6;
+                },
+                confidence: 0.75
+            },
+            '🍕 Food': {
+                description: 'Hand to mouth',
+                detection: (keypoints) => {
+                    const wrist = keypoints[0];
+                    const mouthY = 100; // Approximate mouth position
+                    return Math.abs(wrist.y - mouthY) < 50;
+                },
+                confidence: 0.7
+            },
+            '💧 Water': {
+                description: 'Cupped hand to mouth',
+                detection: (keypoints) => {
+                    const fingersUp = getFingersUp(keypoints);
+                    const wrist = keypoints[0];
+                    const mouthY = 100;
+                    return fingersUp.filter(up => up).length >= 3 && 
+                           Math.abs(wrist.y - mouthY) < 60;
+                },
+                confidence: 0.7
+            }
+        };
+
+        // Join room
+        socket.emit('join-room', roomId);
+
+        // Socket event listeners
+        socket.on('role-assigned', (role) => {
+            console.log('Role assigned:', role);
+            status.textContent = `Role: ${role} | Room: ${roomId} | Gestures detected: 0`;
+        });
+
+        socket.on('chat-message', (data) => {
+            addMessageToChat(data);
+        });
+
+        socket.on('language-assigned', (lang) => {
+            currentLanguage = lang;
+            languageSelect.value = lang;
+        });
+
+        // Language selection
+        languageSelect.addEventListener('change', (e) => {
+            currentLanguage = e.target.value;
+            socket.emit('language-change', { roomId, language: currentLanguage });
+        });
+
+        // Send message
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Manual gesture buttons
+        document.querySelectorAll('.gesture-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const gesture = btn.getAttribute('data-gesture');
+                sendGestureMessage(gesture);
+            });
+        });
+
+        // Clear history
+        clearBtn.addEventListener('click', () => {
+            gestureHistory = [];
+            updateGestureHistory();
+        });
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                socket.emit('chat-message', { roomId, message });
+                messageInput.value = '';
+            }
+        }
+
+        function sendGestureMessage(gesture) {
+            socket.emit('chat-message', { 
+                roomId, 
+                message: `[Gesture] ${gesture}` 
+            });
+            addToGestureHistory(gesture, 1.0);
+        }
+
+        function addMessageToChat(data) {
+            const messageDiv = document.createElement('div');
+            const isGesture = data.message.includes('[Gesture]');
+            messageDiv.className = `message ${data.isOriginal ? 'own' : ''} ${isGesture ? 'gesture' : ''}`;
+            
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            header.textContent = `${data.senderRole} • ${new Date(data.timestamp).toLocaleTimeString()}`;
+            
+            const body = document.createElement('div');
+            body.textContent = data.message.replace('[Gesture] ', '');
+            
+            if (data.translationInfo && !data.isOriginal) {
+                const translationNote = document.createElement('div');
+                translationNote.style.fontSize = '0.8rem';
+                translationNote.style.color = '#666';
+                translationNote.textContent = `Translated from ${data.translationInfo.sourceLang}`;
+                messageDiv.appendChild(translationNote);
+            }
+
+            messageDiv.appendChild(header);
+            messageDiv.appendChild(body);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Enhanced gesture detection functions
+        function getFingersUp(keypoints) {
+            return [
+                keypoints[4].y < keypoints[3].y, // thumb
+                keypoints[8].y < keypoints[6].y, // index
+                keypoints[12].y < keypoints[10].y, // middle
+                keypoints[16].y < keypoints[14].y, // ring
+                keypoints[20].y < keypoints[18].y  // pinky
+            ];
+        }
+
+        function getHandOpenness(keypoints) {
+            const fingersUp = getFingersUp(keypoints);
+            return fingersUp.filter(up => up).length / 5;
+        }
+
+        function isHandMoving(keypoints, threshold = 10) {
+            if (gestureBuffer.length < 2) return false;
+            
+            const currentWrist = keypoints[0];
+            const previousWrist = gestureBuffer[gestureBuffer.length - 1][0];
+            
+            const dx = currentWrist.x - previousWrist.x;
+            const dy = currentWrist.y - previousWrist.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            return distance > threshold;
+        }
+
+        function isTouching(point1, point2, threshold = 25) {
+            const dx = point1.x - point2.x;
+            const dy = point1.y - point2.y;
+            return Math.sqrt(dx * dx + dy * dy) < threshold;
+        }
+
+        function recognizeGestureEnhanced(hand) {
+            const keypoints = hand.keypoints;
+            let bestGesture = null;
+            let bestConfidence = 0;
+
+            // Add current hand position to buffer
+            gestureBuffer.push(keypoints);
+            if (gestureBuffer.length > GESTURE_BUFFER_SIZE) {
+                gestureBuffer.shift();
+            }
+
+            // Test against all gestures in vocabulary
+            for (const [gestureName, gestureData] of Object.entries(GESTURE_VOCABULARY)) {
+                try {
+                    if (gestureData.detection(keypoints)) {
+                        if (gestureData.confidence > bestConfidence) {
+                            bestConfidence = gestureData.confidence;
+                            bestGesture = gestureName;
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`Error detecting ${gestureName}:`, error);
+                }
+            }
+
+            return bestGesture ? { 
+                gesture: bestGesture, 
+                confidence: bestConfidence,
+                description: GESTURE_VOCABULARY[bestGesture].description
+            } : null;
+        }
+
+        // Sign Language Detection
+        startBtn.addEventListener('click', startDetection);
+        stopBtn.addEventListener('click', stopDetection);
+
+        async function startDetection() {
+            try {
+                status.textContent = 'Initializing camera...';
+                
+                // Get webcam access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                webcam.srcObject = stream;
+
+                // Load hand pose detection model
+                status.textContent = 'Loading hand detection model...';
+                const model = handPoseDetection.SupportedModels.MediaPipeHands;
+                const detectorConfig = {
+                    runtime: 'tfjs',
+                    modelType: 'full'
+                };
+                
+                detector = await handPoseDetection.createDetector(model, detectorConfig);
+                
+                // Setup canvas
+                const ctx = output.getContext('2d');
+                output.width = webcam.videoWidth;
+                output.height = webcam.videoHeight;
+
+                isDetecting = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                status.textContent = 'Detection active - Make gestures in front of camera';
+
+                // Detection loop
+                async function detectFrame() {
+                    if (!isDetecting) return;
+
+                    try {
+                        const hands = await detector.estimateHands(webcam);
+                        
+                        // Clear canvas
+                        ctx.clearRect(0, 0, output.width, output.height);
+                        
+                        if (hands.length > 0) {
+                            const hand = hands[0];
+                            drawHand(hand, ctx);
+                            
+                            // Enhanced gesture recognition
+                            const gesture = recognizeGestureEnhanced(hand);
+                            
+                            if (gesture && !gestureCooldown) {
+                                const confidencePercent = Math.round(gesture.confidence * 100);
+                                gestureText.textContent = `${gesture.gesture}`;
+                                confidence.textContent = `Confidence: ${confidencePercent}% - ${gesture.description}`;
+                                confidenceBar.style.width = `${confidencePercent}%`;
+                                
+                                // Send gesture as message if confidence is high enough
+                                if (gesture.confidence > 0.7 && gesture.gesture !== lastDetectedGesture) {
+                                    lastDetectedGesture = gesture.gesture;
+                                    sendGestureMessage(gesture.gesture);
+                                    
+                                    // Cooldown to prevent spam
+                                    gestureCooldown = true;
+                                    setTimeout(() => {
+                                        gestureCooldown = false;
+                                    }, 1500);
+                                }
+                            }
+                        } else {
+                            gestureText.textContent = 'No hand detected';
+                            confidence.textContent = 'Move hand into camera view';
+                            confidenceBar.style.width = '0%';
+                        }
+                    } catch (error) {
+                        console.error('Detection error:', error);
+                    }
+
+                    if (isDetecting) {
+                        requestAnimationFrame(detectFrame);
+                    }
+                }
+
+                detectFrame();
+
+            } catch (error) {
+                console.error('Error starting detection:', error);
+                status.textContent = 'Error: ' + error.message;
+                isDetecting = false;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        function stopDetection() {
+            isDetecting = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            status.textContent = 'Detection stopped';
+            gestureText.textContent = 'Waiting for gesture...';
+            confidence.textContent = 'Confidence: 0%';
+            confidenceBar.style.width = '0%';
+            
+            // Stop webcam stream
+            if (webcam.srcObject) {
+                webcam.srcObject.getTracks().forEach(track => track.stop());
+                webcam.srcObject = null;
+            }
+        }
+
+        function drawHand(hand, ctx) {
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.fillStyle = '#ff6b6b';
+
+            // Draw keypoints
+            hand.keypoints.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw connections
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4],
+                [0, 5], [5, 6], [6, 7], [7, 8],
+                [5, 9], [9, 10], [10, 11], [11, 12],
+                [9, 13], [13, 14], [14, 15], [15, 16],
+                [13, 17], [17, 18], [18, 19], [19, 20],
+                [0, 17]
+            ];
+
+            connections.forEach(([start, end]) => {
+                const startPoint = hand.keypoints[start];
+                const endPoint = hand.keypoints[end];
+                ctx.beginPath();
+                ctx.moveTo(startPoint.x, startPoint.y);
+                ctx.lineTo(endPoint.x, endPoint.y);
+                ctx.stroke();
+            });
+        }
+
+        function addToGestureHistory(gesture, confidence) {
+            const timestamp = new Date().toLocaleTimeString();
+            gestureHistory.unshift({
+                gesture,
+                confidence,
+                timestamp
+            });
+            
+            if (gestureHistory.length > 10) {
+                gestureHistory.pop();
+            }
+            
+            updateGestureHistory();
+            updateStatus();
+        }
+
+        function updateGestureHistory() {
+            gestureHistoryDiv.innerHTML = '';
+            
+            if (gestureHistory.length === 0) {
+                gestureHistoryDiv.innerHTML = '<div style="color: #7f8c8d; text-align: center; padding: 10px;">No gestures detected yet</div>';
+                return;
+            }
+            
+            gestureHistory.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'gesture-item';
+                div.innerHTML = `
+                    <strong>${item.gesture}</strong> 
+                    <span style="color: #27ae60;">${Math.round(item.confidence * 100)}%</span>
+                    <span style="color: #7f8c8d; float: right;">${item.timestamp}</span>
+                `;
+                gestureHistoryDiv.appendChild(div);
+            });
+        }
+
+        function updateStatus() {
+            status.textContent = `Detection active | Gestures detected: ${gestureHistory.length} | Room: ${roomId}`;
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopDetection();
+            socket.disconnect();
+        });
+
+        // Initialize
+        updateGestureHistory();
+    </script>
+</body>
+</html>

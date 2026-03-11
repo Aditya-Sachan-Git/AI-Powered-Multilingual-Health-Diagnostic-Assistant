@@ -1,0 +1,1444 @@
+//client.js
+const socket = io();
+let localStream;
+let peerConnection;
+let myRole = null;
+let otherUserId = null;
+
+// Get ROOM_ID from the page
+const ROOM_ID = window.ROOM_ID || new URLSearchParams(window.location.search).get('roomId') || '101';
+console.log("ROOM_ID:", ROOM_ID);
+
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
+const sendMsgBtn = document.getElementById("sendMsgBtn");
+const chatBox = document.getElementById("chatBox");
+const recordBtn = document.getElementById("recordBtn");
+const transcript = document.getElementById("transcript");
+
+// Enhanced WebRTC configuration
+const config = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" }
+  ],
+  iceCandidatePoolSize: 10
+};
+
+// Debug: Check if elements are found
+console.log("DOM Elements found:");
+console.log("localVideo:", localVideo);
+console.log("remoteVideo:", remoteVideo);
+console.log("sendMsgBtn:", sendMsgBtn);
+console.log("chatBox:", chatBox);
+console.log("recordBtn:", recordBtn);
+console.log("transcript:", transcript);
+
+// === 1. Video/Audio Initialization ===
+async function init() {
+  try {
+    console.log("Initializing video/audio...");
+    localStream = await navigator.mediaDevices.getUserMedia({ 
+      video: true, 
+      audio: true 
+    });
+    localVideo.srcObject = localStream;
+    console.log("Local stream obtained:", localStream);
+
+    // Set video properties
+    localVideo.muted = true;
+    localVideo.volume = 0;
+    
+    // Join room first, then handle role assignment
+    console.log("Joining room:", ROOM_ID);
+    socket.emit("join-room", ROOM_ID);
+  } catch (error) {
+    console.error("Error initializing media:", error);
+    alert("Error accessing camera/microphone: " + error.message);
+    // Fallback: continue without media
+    console.log("Joining room without media:", ROOM_ID);
+    socket.emit("join-room", ROOM_ID);
+  }
+
+  // Handle role assignment
+  socket.on("role-assigned", (role) => {
+    myRole = role;
+    console.log("My role is:", myRole);
+    updateUIBasedOnRole(role);
+    updateStatus('role', `Role: ${role}`);
+  });
+
+  socket.on("room-full", () => {
+    alert("Room is full!");
+    updateStatus('connection', 'Room full');
+  });
+
+  socket.on("connect", () => {
+    console.log("Connected to server");
+    updateStatus('connection', 'Connected to server');
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Disconnected from server");
+    updateStatus('connection', 'Disconnected');
+  });
+
+  socket.on("connect_error", (error) => {
+    console.error("Connection error:", error);
+    updateStatus('connection', 'Connection error');
+  });
+
+  // NEW: Improved user connection handling
+  socket.on("user-connected", async (userId) => {
+    console.log("User connected:", userId);
+    otherUserId = userId;
+    updateStatus('remote', `Remote user: ${userId}`);
+    
+    if (myRole) {
+      await createPeer();
+      // Only offer if we're the first user (doctor)
+      if (myRole === 'doctor') {
+        try {
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          socket.emit("offer", { 
+            sdp: peerConnection.localDescription, 
+            to: otherUserId 
+          });
+          console.log("Offer created and sent");
+        } catch (error) {
+          console.error("Error creating offer:", error);
+        }
+      }
+    }
+  });
+
+  // NEW: Improved offer handling
+  socket.on("offer", async ({ sdp, from }) => {
+    console.log("Received offer from:", from);
+    otherUserId = from;
+    updateStatus('remote', `Remote user: ${from}`);
+    
+    if (!peerConnection) {
+      await createPeer();
+    }
+    
+    try {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      socket.emit("answer", { 
+        sdp: answer, 
+        to: from 
+      });
+      console.log("Answer created and sent");
+    } catch (error) {
+      console.error("Error handling offer:", error);
+    }
+  });
+
+  // NEW: Improved answer handling
+  socket.on("answer", async ({ sdp, from }) => {
+    console.log("Received answer from:", from);
+    try {
+      if (peerConnection) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+        console.log("Remote description set successfully");
+      }
+    } catch (error) {
+      console.error("Error handling answer:", error);
+    }
+  });
+
+  // NEW: Improved ICE candidate handling
+  socket.on("ice-candidate", async ({ candidate, from }) => {
+    console.log("Received ICE candidate from:", from);
+    try {
+      if (peerConnection && candidate) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log("ICE candidate added successfully");
+      }
+    } catch (error) {
+      console.error("Error adding ICE candidate:", error);
+    }
+  });
+
+  socket.on("user-disconnected", (userId) => {
+    console.log("User disconnected:", userId);
+    if (userId === otherUserId) {
+      otherUserId = null;
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      remoteVideo.srcObject = null;
+      updateStatus('remote', 'No remote user');
+      updateStatus('connection', 'Peer disconnected');
+    }
+  });
+
+  // Handle chat messages
+  socket.on("chat-message", ({ sender, message, senderRole }) => {
+    addChatBubble(sender, message, senderRole);
+  });
+
+  // Initialize status display
+  initializeStatusDisplay();
+}
+
+// NEW: Improved peer connection creation
+async function createPeer() {
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  
+  try {
+    peerConnection = new RTCPeerConnection(config);
+    console.log("Peer connection created with config:", config);
+    updateStatus('connection', 'Creating peer connection...');
+
+    // Add all tracks from local stream
+    if (localStream) {
+      localStream.getTracks().forEach(track => {
+        console.log("Adding track:", track.kind, track.readyState);
+        peerConnection.addTrack(track, localStream);
+      });
+    }
+
+    // Handle incoming tracks properly
+    peerConnection.ontrack = (event) => {
+      console.log("Received remote tracks:", event.streams.length);
+      if (event.streams && event.streams[0]) {
+        remoteVideo.srcObject = event.streams[0];
+        console.log("Remote video source set");
+        updateStatus('remote', 'Remote video active');
+        
+        // Play the remote video
+        remoteVideo.play().catch(e => console.error("Remote video play error:", e));
+      }
+    };
+
+    // Improved ICE candidate handling
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate && otherUserId) {
+        console.log("Sending ICE candidate to:", otherUserId);
+        socket.emit("ice-candidate", { 
+          candidate: event.candidate,
+          to: otherUserId 
+        });
+      } else if (!event.candidate) {
+        console.log("All ICE candidates sent");
+      }
+    };
+
+    // Better connection state tracking
+    peerConnection.onconnectionstatechange = () => {
+      const state = peerConnection.connectionState;
+      console.log("Connection state:", state);
+      updateStatus('connection', `Connection: ${state}`);
+      
+      if (state === 'connected') {
+        console.log("✅ Peers connected!");
+        updateStatus('connection', '✅ Connected!');
+      } else if (state === 'failed' || state === 'disconnected') {
+        console.log("❌ Connection failed");
+        // Try to reconnect
+        setTimeout(() => {
+          if (peerConnection && peerConnection.connectionState === 'failed') {
+            createPeer();
+          }
+        }, 2000);
+      }
+    };
+
+    peerConnection.oniceconnectionstatechange = () => {
+      console.log("ICE connection state:", peerConnection.iceConnectionState);
+    };
+
+    peerConnection.onicegatheringstatechange = () => {
+      console.log("ICE gathering state:", peerConnection.iceGatheringState);
+    };
+
+    // Handle negotiation needed
+    peerConnection.onnegotiationneeded = async () => {
+      console.log("Negotiation needed");
+      if (myRole === 'doctor' && otherUserId) {
+        try {
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          socket.emit("offer", { 
+            sdp: peerConnection.localDescription, 
+            to: otherUserId 
+          });
+        } catch (err) {
+          console.error("Negotiation error:", err);
+        }
+      }
+    };
+
+    updateStatus('connection', 'Peer connection ready');
+    return peerConnection;
+
+  } catch (error) {
+    console.error("Error creating peer connection:", error);
+    updateStatus('connection', 'Peer connection failed');
+    return null;
+  }
+}
+
+// Update UI based on assigned role
+function updateUIBasedOnRole(role) {
+  const roleIndicator = document.getElementById("roleIndicator") || createRoleIndicator();
+  roleIndicator.textContent = `Your Role: ${role}`;
+  roleIndicator.className = `role-indicator role-${role.toLowerCase()}`;
+}
+
+function createRoleIndicator() {
+  const indicator = document.createElement("div");
+  indicator.id = "roleIndicator";
+  indicator.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    z-index: 1000;
+    background: rgba(0,0,0,0.8);
+    color: white;
+  `;
+  document.body.appendChild(indicator);
+  return indicator;
+}
+
+// NEW: Status display functions
+function initializeStatusDisplay() {
+  const statusDiv = document.createElement("div");
+  statusDiv.id = "statusDisplay";
+  statusDiv.style.cssText = `
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 10px;
+    z-index: 1000;
+    font-family: monospace;
+    font-size: 12px;
+    border-radius: 5px;
+  `;
+  statusDiv.innerHTML = `
+    <div>Local: <span id="localStatus">Loading...</span></div>
+    <div>Remote: <span id="remoteStatus">Waiting...</span></div>
+    <div>Connection: <span id="connectionStatus">Disconnected</span></div>
+    <div>Role: <span id="roleStatus">Unknown</span></div>
+  `;
+  document.body.appendChild(statusDiv);
+}
+
+function updateStatus(type, message) {
+  const element = document.getElementById(`${type}Status`);
+  if (element) {
+    element.textContent = message;
+  }
+}
+
+// Initialize the app
+init();
+
+// === 2. Transcription using OpenAI Whisper STT ===
+
+let recorder, chunks = [], recording = false;
+
+recordBtn.onclick = async () => {
+  if (!recording) {
+    try {
+      // Check if we have a role assigned
+      if (!myRole) {
+        alert("Please wait for role assignment before recording.");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorder = new MediaRecorder(stream, { mimeType: "audio/webm;codecs=opus" });
+      chunks = [];
+
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        console.log("Audio blob created, size:", blob.size);
+        if (blob.size > 0) {
+          await transcribe(blob);
+        } else {
+          transcript.value = "[No audio recorded]";
+        }
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      recorder.start();
+      recording = true;
+      recordBtn.textContent = "Stop Recording";
+      recordBtn.classList.add("recording");
+      console.log("Recording started");
+    } catch (e) {
+      console.error("Microphone access error:", e);
+      alert("Microphone access error: " + e.message);
+    }
+  } else {
+    recorder.stop();
+    recording = false;
+    recordBtn.textContent = "Start Recording";
+    recordBtn.classList.remove("recording");
+    console.log("Recording stopped");
+  }
+};
+
+async function transcribe(blob) {
+  transcript.value = "Transcribing...";
+  const form = new FormData();
+  form.append("audio", blob, "speech.webm");
+
+  try {
+    const resp = await fetch("/api/stt/whisper", { method: "POST", body: form });
+    
+    if (!resp.ok) {
+      throw new Error(`HTTP error! status: ${resp.status}`);
+    }
+    
+    const data = await resp.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    transcript.value = data.text || "[No transcription]";
+    
+    // Send as chat message if transcription is successful
+    if (data.text && data.text.trim() && myRole) {
+      socket.emit("stt-message", { roomId: ROOM_ID, text: data.text });
+    }
+  } catch (e) {
+    console.error("Transcription error:", e);
+    transcript.value = `[Transcription failed: ${e.message}]`;
+  }
+}
+
+// === 3. Chat Message ===
+sendMsgBtn.onclick = () => {
+  const text = transcript.value.trim();
+  if (text && myRole) {
+    socket.emit("chat-message", {
+      roomId: ROOM_ID,
+      message: text,
+      role: myRole
+    });
+    transcript.value = "";
+  } else if (!myRole) {
+    alert("Please wait for role assignment before sending messages.");
+  }
+};
+
+function addChatBubble(sender, msg, senderRole) {
+  const p = document.createElement("p");
+  const roleClass = senderRole ? senderRole.toLowerCase() : 'unknown';
+  p.className = `chat-message role-${roleClass}`;
+
+  const roleDisplay = senderRole ? ` (${senderRole})` : '';
+  p.innerHTML = `<strong>${sender}${roleDisplay}:</strong> ${msg}`;
+
+  chatBox.appendChild(p);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Handle page unload
+window.addEventListener('beforeunload', () => {
+  if (peerConnection) {
+    peerConnection.close();
+  }
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+  }
+});
+//room.ejs
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room <%= roomId %> - MediLingo Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --galaxy-dark: #0f172a;
+            --galaxy-light: #1e293b;
+            --nebula-blue: #6366f1;
+            --nebula-light: #818cf8;
+            --nebula-dark: #4f46e5;
+            --purple-dark: #4338ca;
+            --white-soft: #f8fafc;
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.8);
+            --card-bg: rgba(255, 255, 255, 0.15);
+            --card-border: rgba(255, 255, 255, 0.2);
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --text-dark: #1e293b;
+            --text-gray: #64748b;
+            --recording-red: #dc2626;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+            background-color: var(--galaxy-dark);
+        }
+
+        /* Galaxy Background with Subtle Gradient */
+        .galaxy-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--galaxy-dark) 0%, var(--galaxy-light) 70%);
+        }
+
+        /* Subtle Pulsating Glow Effect */
+        .glow-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(129, 140, 248, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse-glow 6s ease-in-out infinite;
+            opacity: 0.3;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+        }
+
+        /* Particle Styles for Subtle Floating Dots */
+        .particle {
+            position: absolute;
+            background: var(--text-white);
+            border-radius: 50%;
+            opacity: 0.2;
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) translateX(0); opacity: 0.2; }
+            50% { opacity: 0.4; }
+            100% { transform: translateY(-100vh) translateX(3px); opacity: 0; }
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .nav.scrolled {
+            padding: 16px 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo-nav {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-nav i {
+            font-size: 1.8rem;
+            color: var(--nebula-light);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+       
+
+
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 5;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .room-title {
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text-white);
+            margin-bottom: 24px;
+            text-shadow: 0 0 8px rgba(129, 140, 248, 0.4);
+            text-align: center;
+        }
+
+        .room-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 32px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Video Section */
+        .video-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        video {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+            background: var(--galaxy-light);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--card-border);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        video:hover {
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        #localVideo::after {
+            content: 'You';
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(6px);
+            color: var(--text-white);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        #remoteVideo::after {
+            content: 'Remote Participant';
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(6px);
+            color: var(--text-white);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Transcription Section */
+        .transcription-section {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            max-width: 600px;
+            margin: 0 auto 32px;
+            text-align: center;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .transcription-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-white);
+            margin-bottom: 20px;
+        }
+
+        #recordBtn {
+            background: var(--nebula-light);
+            color: var(--text-white);
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 auto 16px;
+        }
+
+        #recordBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+            background: var(--nebula-blue);
+        }
+
+        #recordBtn.recording {
+            background: var(--recording-red);
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+
+        #recordBtn.recording:hover {
+            box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+        }
+
+        #recordBtn i {
+            font-size: 1.1rem;
+        }
+
+        #transcript {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            font-size: 0.95rem;
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-white);
+            resize: none;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        #transcript:focus {
+            outline: none;
+            border-color: var(--nebula-light);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+        }
+
+        #transcript::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        #sendMsgBtn {
+            background: var(--white-soft);
+            color: var(--nebula-blue);
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 16px auto 0;
+        }
+
+        #sendMsgBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+            background: #f1f5f9;
+        }
+
+        #sendMsgBtn i {
+            font-size: 1.1rem;
+        }
+
+        /* Chat Box */
+        #chatBox {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            max-width: 600px;
+            margin: 0 auto;
+            min-height: 150px;
+            max-height: 250px;
+            overflow-y: auto;
+            animation: fadeIn 1s ease-out;
+        }
+
+        #chatBox p {
+            font-size: 0.9rem;
+            color: var(--text-white);
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        #chatBox p:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #chatBox p::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -5px;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-right: 5px solid rgba(255, 255, 255, 0.05);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--text-dark);
+            color: var(--text-white);
+            padding: 32px 0;
+            text-align: center;
+            position: relative;
+            z-index: 5;
+        }
+
+        .footer-text {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .footer-text a {
+            color: var(--nebula-light);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-text a:hover {
+            color: var(--text-white);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .video-container {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                padding: 16px 24px;
+            }
+            .container {
+                padding: 24px 16px;
+            }
+            .transcription-section {
+                padding: 20px;
+            }
+            .room-title {
+                font-size: 2rem;
+            }
+            #chatBox {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav {
+                padding: 12px 16px;
+            }
+            .logo-nav {
+                font-size: 1.2rem;
+            }
+            .btn-signup {
+                padding: 8px 14px;
+                font-size: 0.9rem;
+            }
+            .transcription-section {
+                padding: 16px;
+            }
+            #recordBtn, #sendMsgBtn {
+                padding: 10px 16px;
+                font-size: 0.9rem;
+            }
+            #transcript {
+                height: 80px;
+            }
+            #chatBox {
+                min-height: 120px;
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Galaxy Background -->
+    <div class="galaxy-bg">
+        <div class="glow-effect">
+            <!-- JavaScript will generate glow effects -->
+        </div>
+    </div>
+
+    <!-- Particle Background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Navigation -->
+    <nav class="nav" id="navbar">
+        <div class="logo-nav">
+            <i class="fas fa-comment-medical"></i>
+            <span>MediLingo Pro</span>
+        </div>
+       
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h2 class="room-title">Consultation Room: <%= roomId %></h2>
+        <p class="room-subtitle">Breaking language barriers in healthcare with MediLingo Pro</p>
+        <div class="video-container">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+        <section class="transcription-section">
+            <h3 class="transcription-title">Doctor’s Live Transcription</h3>
+            <button id="recordBtn">
+                <i class="fas fa-microphone"></i>
+                Start Recording
+            </button>
+            <textarea id="transcript" placeholder="Transcript will appear here..." readonly></textarea>
+            <button id="sendMsgBtn">
+                <i class="fas fa-paper-plane"></i>
+                Send as Message
+            </button>
+        </section>
+        <div id="chatBox"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">
+            © 2025 MediLingo Pro. All rights reserved. | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> | <a href="#">HIPAA Compliance</a>
+        </p>
+    </footer>
+
+    <script>
+        // Initialize Pulsating Glow Effect
+        const glowEffectContainer = document.querySelector('.glow-effect');
+        for (let i = 0; i < 3; i++) {
+            const glow = document.createElement('div');
+            glow.classList.add('glow');
+            glow.style.left = `${Math.random() * 80 + 10}%`;
+            glow.style.top = `${Math.random() * 80 + 10}%`;
+            glow.style.animationDelay = `${Math.random() * 3}s`;
+            glowEffectContainer.appendChild(glow);
+        }
+
+        // Initialize Particles
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 30;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            
+            const size = Math.random() * 3 + 1;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            
+            const duration = Math.random() * 8 + 10;
+            particle.style.animationDuration = `${duration}s`;
+            
+            particle.style.animationDelay = `${Math.random() * 4}s`;
+            
+            particlesContainer.appendChild(particle);
+        }
+
+        // Navbar Scroll Effect
+        const navbar = document.getElementById('navbar');
+        
+        window.addEventListener('scroll', () => {
+            if (!navbar) return;
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        const ROOM_ID = "<%= roomId %>";
+        window.ROOM_ID = ROOM_ID;
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js"></script>
+</body>
+</html>
+
+//server.js
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
+const login = require('./routes/loginandsignup');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const doctorSignup = require('./routes/doctorsignup');
+const appointment = require('./routes/appointment');
+const ChatMessage = require('./models/ChatMessage');
+
+const {GoogleGenerativeAI} = require('@google/generative-ai')
+// Google Translate API
+const { translate } = require('@vitalets/google-translate-api');
+
+require('dotenv').config();
+
+const app = express();
+app.use(cookieParser());
+const genAI = new GoogleGenerativeAI("AIzaSyBcqJQl9hXGYo1Gf8Od3iaparO2kXj-zNg");
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.set("view engine", "ejs");
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(login);
+app.use(doctorSignup);
+app.use(appointment);
+const multer = require("multer");
+const fs = require("fs");
+const OpenAI = require("openai"); // ✅ use OpenAI directly for CommonJS
+
+const upload = multer({ dest: "uploads/" });
+
+// === OpenAI setup ===
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "your_openai_api_key_here" // store your key in .env
+});
+
+// === Whisper STT endpoint ===
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+ffmpeg.setFfmpegPath(ffmpegPath);
+
+app.post("/api/stt/whisper", upload.single("audio"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No audio file uploaded" });
+    }
+    
+    const inputPath = req.file.path;
+    const outputPath = inputPath + ".wav";
+
+    console.log("Processing audio file:", inputPath);
+
+    // Convert webm -> wav
+    await new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .toFormat("wav")
+        .on("end", () => {
+          console.log("Audio conversion completed");
+          resolve();
+        })
+        .on("error", (err) => {
+          console.error("FFmpeg conversion error:", err);
+          reject(err);
+        })
+        .save(outputPath);
+    });
+
+    // Check if output file exists
+    if (!fs.existsSync(outputPath)) {
+      throw new Error("Audio conversion failed - output file not created");
+    }
+
+    console.log("Starting Whisper transcription...");
+
+    // Transcribe with Whisper
+    const transcription = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(outputPath),
+      model: "whisper-1"
+    });
+
+    console.log("Transcription completed:", transcription.text);
+
+    // Clean up files
+    try {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    } catch (cleanupErr) {
+      console.warn("Cleanup error:", cleanupErr);
+    }
+
+    res.json({ text: transcription.text || "" });
+  } catch (err) {
+    console.error("Whisper STT error:", err);
+    
+    // Clean up files on error
+    try {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      if (req.file && fs.existsSync(req.file.path + ".wav")) fs.unlinkSync(req.file.path + ".wav");
+    } catch (cleanupErr) {
+      console.warn("Cleanup error:", cleanupErr);
+    }
+    
+    res.status(500).json({ error: err.message || "Transcription failed" });
+  }
+});
+
+
+mongoose.connect('mongodb://localhost:27017/codezilla');
+
+// Translation with fallback
+async function translateTextWithFallback(text, targetLang, sourceLang = 'auto') {
+    try {
+        return await translateText(text, targetLang, sourceLang);
+    } catch (error) {
+        console.log('Primary translation failed, trying alternative method...');
+        try {
+            const { translate: translateAlt } = require('@vitalets/google-translate-api');
+            const result = await translateAlt(text, { to: targetLang });
+            return {
+                text: result.text || text,
+                translated: true,
+                originalText: text,
+                sourceLang: result.from || sourceLang,
+                targetLang
+            };
+        } catch (altError) {
+            console.error('All translation methods failed:', altError.message);
+            return { text, translated: false, error: `Translation failed: ${error.message}`, originalText: text, sourceLang, targetLang };
+        }
+    }
+}
+
+async function translateText(text, targetLang, sourceLang = 'auto') {
+    try {
+        if (sourceLang === targetLang) {
+            return { text, translated: false, originalText: text, sourceLang, targetLang };
+        }
+        console.log(`Translating: "${text}" from ${sourceLang} to ${targetLang}`);
+        const result = await translate(text, { to: targetLang, from: sourceLang === 'auto' ? undefined : sourceLang });
+        if (!result || !result.text) throw new Error('Invalid translation result');
+        const detectedLang = result.from?.language?.iso || result.from?.language || result.from || sourceLang;
+        console.log(`Translation successful: "${result.text}" (${detectedLang} → ${targetLang})`);
+
+        return { text: result.text, translated: true, originalText: text, sourceLang: detectedLang, targetLang };
+    } catch (error) {
+        console.error('Translation error:', error.message);
+        return { text, translated: false, error: error.message, originalText: text, sourceLang, targetLang };
+    }
+}
+
+// Room + language data
+const roomRoles = {};
+const userLanguages = {};
+const roomMessages = {};
+const ROLE_LANGUAGES = { doctor: 'en', patient: 'hi' };
+
+// Helper to process and send messages (used for both chat & STT)
+async function processMessage(socket, { roomId, text, senderRole }) {
+    const senderLang = userLanguages[socket.id];
+    const timestamp = new Date();
+    const baseMessage = {
+        sender: senderRole,
+        senderRole,
+        originalText: text,
+        sourceLang: senderLang,
+        timestamp,
+        socketId: socket.id
+    };
+
+    // Save to history
+    roomMessages[roomId].push(baseMessage);
+    await ChatMessage.create({
+    sessionId: roomId,
+    sender: senderRole,
+    senderRole,
+    originalText: text,
+    translatedText: null, // or translation.text if you want
+    translated: false,    // will be true if you store translated version
+    sourceLang: senderLang,
+    targetLang: null,     // fill if known
+    timestamp
+});
+    // Send to everyone in room
+    const roomSockets = io.sockets.adapter.rooms.get(roomId);
+    if (!roomSockets) return;
+
+    for (const userId of roomSockets) {
+        const targetSocket = io.sockets.sockets.get(userId);
+        if (!targetSocket) continue;
+        const targetLang = userLanguages[userId];
+        let messageToSend = { ...baseMessage };
+
+        if (userId === socket.id) {
+            messageToSend.message = text;
+            messageToSend.isOriginal = true;
+            messageToSend.translated = false;
+        } else {
+            const translation = await translateTextWithFallback(text, targetLang, senderLang);
+            messageToSend.message = translation.text;
+            messageToSend.translated = translation.translated;
+            messageToSend.isOriginal = false;
+            if (translation.translated) {
+                messageToSend.translationInfo = {
+                    originalText: text,
+                    sourceLang: translation.sourceLang,
+                    targetLang: translation.targetLang
+                };
+            }
+            if (translation.error) {
+                messageToSend.translationError = translation.error;
+            }
+        }
+        targetSocket.emit("chat-message", messageToSend);
+    }
+}
+
+// Routes
+app.get("/summarise/:meetingid", async (req, res) => {
+  try {
+    const meetingId = req.params.meetingid;
+
+    // 1️⃣ Get all messages for that meeting in time order
+    const messages = await ChatMessage.find({ sessionId: meetingId })
+      .sort({ timestamp: 1 })
+      .lean();
+
+    if (!messages.length) {
+      return res.status(404).json({ error: "No messages found for this meeting" });
+    }
+
+    // 2️⃣ Prepare conversation text
+    const conversationText = messages
+      .map(
+        (msg) =>
+          `[${msg.timestamp.toISOString()}] ${msg.senderRole || msg.sender}: ${msg.originalText}`
+      )
+      .join("\n");
+
+    // 3️⃣ Build prompt for Gemini
+    const prompt = `
+You are an AI meeting assistant.
+Summarise the following meeting in bullet points, highlighting:
+- Key discussion topics
+- Decisions made
+- Action items with responsible persons
+
+Conversation:
+${conversationText}
+    `;
+
+    // 4️⃣ Call Gemini API
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const summary = result.response.text();
+
+    // 5️⃣ Return summary
+    
+    res.render("summary", { meetingId, summary });
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+app.get('/home', (req, res) => {
+    if (req.cookies.token2) return res.render('home2');
+    res.render('home');
+});
+app.get('/', (req, res) => res.render('main'));
+app.get('/clear-cookies', (req, res) => {
+    for (let cookieName in req.cookies) res.clearCookie(cookieName);
+    res.send('All cookies cleared!');
+});
+app.get("/meet", (req, res) => res.render("index", { roomId: 101 }));
+app.get("/room/:roomId", (req, res) => res.render("room", { roomId: req.params.roomId }));
+
+app.post("/api/stt/result", (req, res) => {
+    const { text, roomId, role } = req.body;
+    console.log(`[STT] [${roomId}] ${role} -> ${text}`);
+    if (text && roomId) io.to(roomId).emit("stt-message", { text, role, roomId });
+    res.sendStatus(200);
+});
+
+app.get('/api/room/:roomId/messages', (req, res) => {
+    res.json(roomMessages[req.params.roomId] || []);
+});
+app.get('/api/languages', (req, res) => {
+    res.json({ en: 'English', hi: 'Hindi' });
+});
+app.post('/api/user/language', (req, res) => {
+    const { socketId, language } = req.body;
+    if (userLanguages[socketId]) {
+        userLanguages[socketId] = language;
+        const targetSocket = io.sockets.sockets.get(socketId);
+        if (targetSocket) targetSocket.emit('language-changed', language);
+        res.json({ success: true });
+    } else res.status(404).json({ error: 'User not found' });
+});
+app.post('/api/translate', async (req, res) => {
+    try {
+        const { text, targetLang, sourceLang } = req.body;
+        res.json(await translateTextWithFallback(text, targetLang, sourceLang));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Socket.IO
+io.on("connection", (socket) => {
+    console.log('User connected:', socket.id);
+
+    // WebRTC pass-through
+    socket.on("offer", (data) => {
+        const targetRoom = Object.keys(roomRoles).find(room => 
+            roomRoles[room].doctor === socket.id || roomRoles[room].patient === socket.id
+        );
+        if (targetRoom) socket.to(targetRoom).emit("offer", { ...data, from: socket.id });
+    });
+    
+    socket.on("answer", (data) => {
+        const targetRoom = Object.keys(roomRoles).find(room => 
+            roomRoles[room].doctor === socket.id || roomRoles[room].patient === socket.id
+        );
+        if (targetRoom) socket.to(targetRoom).emit("answer", { ...data, from: socket.id });
+    });
+    
+    socket.on("ice-candidate", (data) => {
+        const targetRoom = Object.keys(roomRoles).find(room => 
+            roomRoles[room].doctor === socket.id || roomRoles[room].patient === socket.id
+        );
+        if (targetRoom) socket.to(targetRoom).emit("ice-candidate", data);
+    });
+
+    // Chat message
+    socket.on("chat-message", async ({ roomId, message }) => {
+        let senderRole = roomRoles[roomId]?.doctor === socket.id ? "doctor" :
+                         roomRoles[roomId]?.patient === socket.id ? "patient" : null;
+        if (senderRole) await processMessage(socket, { roomId, text: message, senderRole });
+    });
+
+    // STT message
+    socket.on("stt-message", async ({ text, roomId }) => {
+        let senderRole = roomRoles[roomId]?.doctor === socket.id ? "doctor" :
+                         roomRoles[roomId]?.patient === socket.id ? "patient" : null;
+        if (senderRole) await processMessage(socket, { roomId, text, senderRole });
+    });
+
+    socket.on("join-room", (roomId) => {
+        console.log(`User ${socket.id} joining room ${roomId}`);
+        socket.join(roomId);
+
+        if (!roomRoles[roomId]) {
+            roomRoles[roomId] = { doctor: null, patient: null };
+            roomMessages[roomId] = [];
+        }
+
+        let assignedRole;
+        if (!roomRoles[roomId].doctor) {
+            roomRoles[roomId].doctor = socket.id;
+            assignedRole = "doctor";
+        } else if (!roomRoles[roomId].patient) {
+            roomRoles[roomId].patient = socket.id;
+            assignedRole = "patient";
+        } else {
+            socket.emit("room-full");
+            return;
+        }
+
+        userLanguages[socket.id] = ROLE_LANGUAGES[assignedRole];
+        socket.emit("role-assigned", assignedRole);
+        socket.emit("language-assigned", ROLE_LANGUAGES[assignedRole]);
+
+        console.log(`User ${socket.id} -> Role: ${assignedRole}, Lang: ${ROLE_LANGUAGES[assignedRole]}`);
+        socket.to(roomId).emit("user-connected", socket.id);
+
+        // Send message history translated to new user's language
+        (async () => {
+            for (const msg of roomMessages[roomId]) {
+                const targetLang = userLanguages[socket.id];
+                const translation = await translateTextWithFallback(msg.originalText, targetLang, msg.sourceLang);
+                socket.emit("chat-message", {
+                    ...msg,
+                    message: translation.text,
+                    translated: translation.translated,
+                    translationInfo: translation.translated ? translation : null,
+                    translationError: translation.error || null
+                });
+            }
+        })();
+    });
+
+    socket.on("disconnect", () => {
+        console.log('User disconnected:', socket.id);
+        for (const roomId in roomRoles) {
+            if (roomRoles[roomId].doctor === socket.id) roomRoles[roomId].doctor = null;
+            if (roomRoles[roomId].patient === socket.id) roomRoles[roomId].patient = null;
+            if (!roomRoles[roomId].doctor && !roomRoles[roomId].patient) {
+                delete roomRoles[roomId];
+                delete roomMessages[roomId];
+            }
+        }
+        delete userLanguages[socket.id];
+        socket.broadcast.emit("user-disconnected", socket.id);
+    });
+});
+
+server.listen(3000, () => {
+    console.log("Server running at http://localhost:3000");
+    console.log("Doctor language: English (en)");
+    console.log("Patient language: Hindi (hi)");
+});

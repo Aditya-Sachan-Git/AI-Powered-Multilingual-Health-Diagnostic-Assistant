@@ -1,0 +1,614 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room <%= roomId %> - MediLingo Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --galaxy-dark: #0f172a;
+            --galaxy-light: #1e293b;
+            --nebula-blue: #6366f1;
+            --nebula-light: #818cf8;
+            --nebula-dark: #4f46e5;
+            --purple-dark: #4338ca;
+            --white-soft: #f8fafc;
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.8);
+            --card-bg: rgba(255, 255, 255, 0.15);
+            --card-border: rgba(255, 255, 255, 0.2);
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --text-dark: #1e293b;
+            --text-gray: #64748b;
+            --recording-red: #dc2626;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+            background-color: var(--galaxy-dark);
+        }
+
+        /* Galaxy Background with Subtle Gradient */
+        .galaxy-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--galaxy-dark) 0%, var(--galaxy-light) 70%);
+        }
+
+        /* Subtle Pulsating Glow Effect */
+        .glow-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(129, 140, 248, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse-glow 6s ease-in-out infinite;
+            opacity: 0.3;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+        }
+
+        /* Particle Styles for Subtle Floating Dots */
+        .particle {
+            position: absolute;
+            background: var(--text-white);
+            border-radius: 50%;
+            opacity: 0.2;
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) translateX(0); opacity: 0.2; }
+            50% { opacity: 0.4; }
+            100% { transform: translateY(-100vh) translateX(3px); opacity: 0; }
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .nav.scrolled {
+            padding: 16px 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo-nav {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-nav i {
+            font-size: 1.8rem;
+            color: var(--nebula-light);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+       
+
+
+        /* Main Content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 5;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .room-title {
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text-white);
+            margin-bottom: 24px;
+            text-shadow: 0 0 8px rgba(129, 140, 248, 0.4);
+            text-align: center;
+        }
+
+        .room-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 32px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Video Section */
+        .video-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        video {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+            background: var(--galaxy-light);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--card-border);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        video:hover {
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        #localVideo::after {
+            content: 'You';
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(6px);
+            color: var(--text-white);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        #remoteVideo::after {
+            content: 'Remote Participant';
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(6px);
+            color: var(--text-white);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Transcription Section */
+        .transcription-section {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            max-width: 600px;
+            margin: 0 auto 32px;
+            text-align: center;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .transcription-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-white);
+            margin-bottom: 20px;
+        }
+
+        #recordBtn {
+            background: var(--nebula-light);
+            color: var(--text-white);
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 auto 16px;
+        }
+
+        #recordBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+            background: var(--nebula-blue);
+        }
+
+        #recordBtn.recording {
+            background: var(--recording-red);
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+
+        #recordBtn.recording:hover {
+            box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+        }
+
+        #recordBtn i {
+            font-size: 1.1rem;
+        }
+
+        #transcript {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            font-size: 0.95rem;
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-white);
+            resize: none;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        #transcript:focus {
+            outline: none;
+            border-color: var(--nebula-light);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+        }
+
+        #transcript::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        #sendMsgBtn {
+            background: var(--white-soft);
+            color: var(--nebula-blue);
+            padding: 12px 20px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 16px auto 0;
+        }
+
+        #sendMsgBtn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+            background: #f1f5f9;
+        }
+
+        #sendMsgBtn i {
+            font-size: 1.1rem;
+        }
+
+        /* Chat Box */
+        #chatBox {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            max-width: 600px;
+            margin: 0 auto;
+            min-height: 150px;
+            max-height: 250px;
+            overflow-y: auto;
+            animation: fadeIn 1s ease-out;
+        }
+
+        #chatBox p {
+            font-size: 0.9rem;
+            color: var(--text-white);
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        #chatBox p:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #chatBox p::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -5px;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-right: 5px solid rgba(255, 255, 255, 0.05);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        /* Translation indicators */
+        .translation-indicator {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+
+        .translation-indicator.original {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .translation-indicator.translated {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--text-dark);
+            color: var(--text-white);
+            padding: 32px 0;
+            text-align: center;
+            position: relative;
+            z-index: 5;
+        }
+
+        .footer-text {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .footer-text a {
+            color: var(--nebula-light);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-text a:hover {
+            color: var(--text-white);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .video-container {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                padding: 16px 24px;
+            }
+            .container {
+                padding: 24px 16px;
+            }
+            .transcription-section {
+                padding: 20px;
+            }
+            .room-title {
+                font-size: 2rem;
+            }
+            #chatBox {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav {
+                padding: 12px 16px;
+            }
+            .logo-nav {
+                font-size: 1.2rem;
+            }
+            .btn-signup {
+                padding: 8px 14px;
+                font-size: 0.9rem;
+            }
+            .transcription-section {
+                padding: 16px;
+            }
+            #recordBtn, #sendMsgBtn {
+                padding: 10px 16px;
+                font-size: 0.9rem;
+            }
+            #transcript {
+                height: 80px;
+            }
+            #chatBox {
+                min-height: 120px;
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Galaxy Background -->
+    <div class="galaxy-bg">
+        <div class="glow-effect">
+            <!-- JavaScript will generate glow effects -->
+        </div>
+    </div>
+
+    <!-- Particle Background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Navigation -->
+    <nav class="nav" id="navbar">
+        <div class="logo-nav">
+            <i class="fas fa-comment-medical"></i>
+            <span>MediLingo Pro</span>
+        </div>
+       
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h2 class="room-title">Consultation Room: <%= roomId %></h2>
+        <p class="room-subtitle">Breaking language barriers in healthcare with MediLingo Pro</p>
+        <div class="video-container">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+        <section class="transcription-section">
+            <h3 class="transcription-title">Doctor's Live Transcription</h3>
+            <button id="recordBtn">
+                <i class="fas fa-microphone"></i>
+                Start Recording
+            </button>
+            <textarea id="transcript" placeholder="Transcript will appear here or type your message manually..."></textarea>
+            <button id="sendMsgBtn">
+                <i class="fas fa-paper-plane"></i>
+                Send as Message
+            </button>
+            <button id="testBtn" style="background: #10b981; margin-top: 10px;">
+                <i class="fas fa-bug"></i>
+                Test Connection
+            </button>
+            <button id="speechBtn" style="background: #3b82f6; margin-top: 10px;">
+                <i class="fas fa-microphone-alt"></i>
+                Free Speech Recognition
+            </button>
+            <button id="elevenLabsBtn" style="background: #8b5cf6; margin-top: 10px;">
+                <i class="fas fa-robot"></i>
+                11 Labs STT
+            </button>
+        </section>
+        <div id="chatBox"></div>
+        <a href="/chat/summary/<%= roomId %>" target="_blank" id="summaryBtn" style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            max-width: 600px;
+            margin: 16px auto 0;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            border-radius: 8px;
+            text-decoration: none;
+            box-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(16,185,129,0.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 12px rgba(16,185,129,0.3)'">
+            <i class="fas fa-file-medical-alt"></i>
+            View Chat Summary & Diagnosis
+        </a>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">
+            © 2025 MediLingo Pro. All rights reserved. | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> | <a href="#">HIPAA Compliance</a>
+        </p>
+    </footer>
+
+    <script>
+        // Initialize Pulsating Glow Effect
+        const glowEffectContainer = document.querySelector('.glow-effect');
+        for (let i = 0; i < 3; i++) {
+            const glow = document.createElement('div');
+            glow.classList.add('glow');
+            glow.style.left = `${Math.random() * 80 + 10}%`;
+            glow.style.top = `${Math.random() * 80 + 10}%`;
+            glow.style.animationDelay = `${Math.random() * 3}s`;
+            glowEffectContainer.appendChild(glow);
+        }
+
+        // Initialize Particles
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 30;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            
+            const size = Math.random() * 3 + 1;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            
+            const duration = Math.random() * 8 + 10;
+            particle.style.animationDuration = `${duration}s`;
+            
+            particle.style.animationDelay = `${Math.random() * 4}s`;
+            
+            particlesContainer.appendChild(particle);
+        }
+
+        // Navbar Scroll Effect
+        const navbar = document.getElementById('navbar');
+        
+        window.addEventListener('scroll', () => {
+            if (!navbar) return;
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        window.ROOM_ID = "<%= roomId %>";
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/client.js"></script>
+</body>
+</html>

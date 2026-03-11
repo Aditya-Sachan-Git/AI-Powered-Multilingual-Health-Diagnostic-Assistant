@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Medical Analysis Summary</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2 { margin-top: 30px; }
+    .empty { color: #777; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <!-- ✅ Conversation Summary -->
+  <h2>Conversation Summary</h2>
+  <p>
+    <%- typeof summary !== 'undefined' && summary ? summary : "No summary available." %>
+  </p>
+
+  <!-- ✅ Extracted Symptoms -->
+  <h2>Extracted Symptoms</h2>
+  <% if (Array.isArray(symptoms) && symptoms.length > 0) { %>
+    <ul>
+      <% symptoms.forEach(symptom => { %>
+        <li><%= symptom %></li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="empty">No symptoms found in conversation.</p>
+  <% } %>
+
+  <!-- ✅ Predicted Diseases -->
+  <h2>Possible Diseases</h2>
+  <% if (typeof diseasesHtml !== 'undefined' && diseasesHtml) { %>
+    <div>
+      <%- diseasesHtml %> 
+      <!-- ✅ Raw HTML allowed, but only if exists -->
+    </div>
+  <% } else { %>
+    <p class="empty">No disease prediction available.</p>
+  <% } %>
+
+</body>
+</html>

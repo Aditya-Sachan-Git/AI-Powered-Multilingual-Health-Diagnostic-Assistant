@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Disease Prediction System - Chat Analysis</title>
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f4f6f9;
+            text-align: center;
+            padding-top: 50px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            width: 500px;
+            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        textarea {
+            width: 90%;
+            padding: 10px;
+            margin-top: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <nav>
+        <a href="/">Manual Entry</a> | 
+        <a href="/chat">Chat Analysis</a>
+    </nav>
+
+    <h2>💬 AI Chat Symptoms Analysis</h2>
+    <p>Paste a doctor-patient conversation below to automatically extract symptoms and predict the disease.</p>
+
+    <form method="POST" action="/chat_predict">
+        <textarea name="chat_text" rows="10" placeholder="Doctor: What brings you in today?&#10;Patient: I have a severe headache and nausea..." required></textarea>
+        <br>
+        <button type="submit">Analyze & Predict</button>
+    </form>
+</div>
+
+</body>
+</html>

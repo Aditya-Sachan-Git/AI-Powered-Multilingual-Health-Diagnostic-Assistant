@@ -1,0 +1,11 @@
+*Project Scope*
+
+The system provides advisory-level predictions, not medical diagnosis.
+
+Uses publicly available datasets only.
+
+Focuses on diseases such as dengue, malaria, typhoid, and viral fevers.
+
+Supports web-based interaction and visualization.
+
+Designed as a prototype for educational and research purposes.

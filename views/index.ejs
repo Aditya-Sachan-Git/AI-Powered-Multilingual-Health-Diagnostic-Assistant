@@ -1,0 +1,472 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Video Consultation - MediLingo Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --galaxy-dark: #0f172a;
+            --galaxy-light: #1e293b;
+            --nebula-blue: #6366f1;
+            --nebula-light: #818cf8;
+            --nebula-dark: #4f46e5;
+            --purple-dark: #4338ca;
+            --white-soft: #f8fafc;
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.8);
+            --card-bg: rgba(255, 255, 255, 0.15);
+            --card-border: rgba(255, 255, 255, 0.2);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 16px 64px rgba(0, 0, 0, 0.4);
+            --text-dark: #1e293b;
+            --text-gray: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-white);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+            background-color: var(--galaxy-dark);
+        }
+
+        /* Galaxy Background */
+        .galaxy-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at bottom, var(--galaxy-dark) 0%, var(--galaxy-light) 100%);
+            overflow: hidden;
+        }
+
+        /* Shooting Stars */
+        .shooting-stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .shooting-star {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: var(--text-white);
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1),
+                        0 0 0 8px rgba(255, 255, 255, 0.05),
+                        0 0 20px rgba(255, 255, 255, 0.8);
+            animation: shooting 4s linear infinite;
+        }
+
+        .shooting-star::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent);
+        }
+
+        @keyframes shooting {
+            0% {
+                transform: rotate(215deg) translateX(0);
+                opacity: 1;
+            }
+            70% {
+                opacity: 1;
+            }
+            100% {
+                transform: rotate(215deg) translateX(-1000px);
+                opacity: 0;
+            }
+        }
+
+        /* Twinkling Stars */
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--text-white);
+            border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Particle Styles */
+        .particle {
+            position: absolute;
+            background: var(--text-white);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) translateX(0); opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { transform: translateY(-100vh) translateX(5px); opacity: 0; }
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .nav.scrolled {
+            padding: 16px 40px;
+            background: rgba(15, 23, 42, 0.9);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo-nav {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-nav i {
+            font-size: 1.8rem;
+            color: var(--nebula-light);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        
+        /* Main Content */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 5;
+            text-align: center;
+            min-height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .consultation-title {
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text-white);
+            margin-bottom: 16px;
+            text-shadow: 0 0 10px rgba(129, 140, 248, 0.5);
+        }
+
+        .consultation-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Form with Glass Effect */
+        .consultation-form {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: var(--shadow);
+            max-width: 400px;
+            margin: 0 auto;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .consultation-form:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .form-group {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 20px;
+            font-size: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-white);
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--nebula-light);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .join-btn {
+            background: var(--nebula-light);
+            color: var(--text-white);
+            padding: 14px 0;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .join-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+            background: var(--nebula-blue);
+        }
+
+        .join-btn i {
+            font-size: 1.2rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--text-dark);
+            color: var(--text-white);
+            padding: 40px 0;
+            text-align: center;
+            position: relative;
+            z-index: 5;
+        }
+
+        .footer-text {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .footer-text a {
+            color: var(--nebula-light);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-text a:hover {
+            color: var(--text-white);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav {
+                padding: 16px 24px;
+            }
+            .container {
+                padding: 24px 16px;
+            }
+            .consultation-form {
+                padding: 24px;
+            }
+            .consultation-title {
+                font-size: 2rem;
+            }
+            .consultation-subtitle {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav {
+                padding: 12px 16px;
+            }
+            .logo-nav {
+                font-size: 1.2rem;
+            }
+            .btn-signup {
+                padding: 10px 16px;
+                font-size: 0.9rem;
+            }
+            .consultation-form {
+                padding: 20px;
+            }
+            .form-input {
+                padding: 12px 16px;
+                font-size: 0.95rem;
+            }
+            .join-btn {
+                padding: 12px 0;
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Galaxy Background -->
+    <div class="galaxy-bg">
+        <div class="shooting-stars">
+            <!-- JavaScript will generate shooting stars -->
+        </div>
+        <div class="stars">
+            <!-- JavaScript will generate twinkling stars -->
+        </div>
+    </div>
+
+    <!-- Particle Background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Navigation -->
+    <nav class="nav" id="navbar">
+        <div class="logo-nav">
+            <i class="fas fa-comment-medical"></i>
+            <span>MediLingo Pro</span>
+        </div>
+       
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h2 class="consultation-title">Join Video Consultation</h2>
+        <p class="consultation-subtitle">Enter the Meeting ID to connect with healthcare professionals, breaking language barriers with MediLingo Pro.</p>
+        <form class="consultation-form" method="GET" action="/room/<%= roomId %>" onsubmit="return goToRoom()">
+            <div class="form-group">
+                <input type="text" id="roomId" class="form-input" placeholder="Enter Meeting ID" required />
+            </div>
+            
+            <button type="submit" class="join-btn">
+                <i class="fas fa-video"></i>
+                Join Room
+            </button>
+        </form>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">
+            © 2025 MediLingo Pro. All rights reserved. | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> | <a href="#">HIPAA Compliance</a>
+        </p>
+    </footer>
+
+    <script>
+        // Initialize Shooting Stars
+        const shootingStarsContainer = document.querySelector('.shooting-stars');
+        for (let i = 0; i < 10; i++) {
+            const star = document.createElement('div');
+            star.classList.add('shooting-star');
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.animationDelay = `${Math.random() * 4}s`;
+            star.style.animationDuration = `${Math.random() * 2 + 3}s`;
+            shootingStarsContainer.appendChild(star);
+        }
+
+        // Initialize Twinkling Stars
+        const starsContainer = document.querySelector('.stars');
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            star.style.animationDelay = `${Math.random() * 3}s`;
+            starsContainer.appendChild(star);
+        }
+
+        // Particle Background
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 50;
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            
+            const size = Math.random() * 4 + 2;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            
+            const duration = Math.random() * 10 + 10;
+            particle.style.animationDuration = `${duration}s`;
+            
+            particle.style.animationDelay = `${Math.random() * 5}s`;
+            
+            particlesContainer.appendChild(particle);
+        }
+
+        // Navbar Scroll Effect
+        const navbar = document.getElementById('navbar');
+        
+        window.addEventListener('scroll', () => {
+            if (!navbar) return;
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Form Submission
+        function goToRoom() {
+            const roomId = document.getElementById("roomId").value.trim();
+            if (!roomId) return false;
+            location.href = "/room/" + roomId;
+            return false;
+        }
+    </script>
+</body>
+</html>
