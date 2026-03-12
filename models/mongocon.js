@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 require('dotenv').config()
-const MONGODB_URI = 'mongodb+srv://adi:112233445566@cluster0.xdssibk.mongodb.net/?appName=Cluster0' ;
+const MONGODB_URI = 'mongodb+srv://<username>:<password>@<cluster-url>/<default-database>?retryWrites=true&w=majority' ;
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
