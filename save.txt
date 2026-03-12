@@ -1046,7 +1046,7 @@ require('dotenv').config();
 
 const app = express();
 app.use(cookieParser());
-const genAI = new GoogleGenerativeAI("AIzaSyBcqJQl9hXGYo1Gf8Od3iaparO2kXj-zNg");
+const genAI = new GoogleGenerativeAI("API-key");
 const server = http.createServer(app);
 const io = new Server(server);
 
