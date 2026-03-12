@@ -19,7 +19,7 @@ require('dotenv').config();
 
 const app = express();
 app.use(cookieParser());
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "AIzaSyDRbCKLTiqNOKJicDfc64-QucEy6wii0tY");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "GEMINI_API_KEY");
 const server = http.createServer(app);
 const io = new Server(server);
 
